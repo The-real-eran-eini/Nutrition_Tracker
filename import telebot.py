@@ -21,6 +21,6 @@ if st.button("עדכן מערכת"):
                 st.success("הנה הניתוח:")
                 st.write(response.text)
             except Exception as e:
-                st.error("הייתה בעיה להתחבר למוח. ודא שמפתח ה-API הוזן נכון בהגדרות של סטרימליט.")
+                st.error(f"שגיאה מפורטת: {e}")
     else:
         st.warning("אנא הקלד משהו בתיבה לפני הלחיצה.")
