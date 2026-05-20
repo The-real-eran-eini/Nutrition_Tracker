@@ -3,8 +3,7 @@ import google.generativeai as genai
 
 # משיכת המפתח מתוך הכספת של סטרימליט
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-model = genai.GenerativeModel('gemini-1.5-flash')
-
+model = genai.GenerativeModel('gemini-pro')
 st.title("המנטור האישי שלי 🍏🏋️‍♂️")
 st.write("ברוך הבא למערכת מעקב התזונה והאימונים שלך.")
 
