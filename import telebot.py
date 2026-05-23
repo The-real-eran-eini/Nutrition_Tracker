@@ -85,7 +85,7 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                 try:
                     st.info("1. מנסה להתחבר לגוגל שיטס...")
                     scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-                    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+                    creds_dict = dict(st.secrets["google_credentials"])
                     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
                     gc = gspread.authorize(creds)
                     sh = gc.open("Nutrition_DB").sheet1
