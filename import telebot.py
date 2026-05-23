@@ -81,37 +81,32 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
                 
-                # 2. גיבוי שקט ל-Google Sheets
+                # 2. גיבוי שקט ל-Google Sheets עם מצב מפתח מופעל
                 try:
-                    # התחברות לגיליון
+                    st.info("1. מנסה להתחבר לגוגל שיטס...")
                     scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
                     creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
                     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
                     gc = gspread.authorize(creds)
                     sh = gc.open("Nutrition_DB").sheet1
+                    st.success("2. התחברות לגיליון עברה בהצלחה! מכין נתונים...")
                     
-                    # בקשה מהמוח לחלץ נתונים לפורמט מסודר (נסתר מהמשתמש)
                     extraction_prompt = f"""
-                    המשתמש כתב עכשיו: '{prompt}'
-                    אתה ענית לו: '{response.text}'
+                    המשתמש כתב: '{prompt}'
+                    אתה ענית: '{response.text}'
                     
-                    המטרה שלך היא לחלץ נתונים עבור מסד הנתונים מתוך האינטראקציה הזו. 
-                    תחזיר אך ורק מבנה JSON תקין עם המפתחות הבאים:
-                    "balance": "סיכום תזונתי של הארוחה והיתרה (אם לא דווח אוכל, כתוב 'ללא אוכל')",
-                    "activity": "איזה אימון או פעילות בוצעה (אם לא בוצעה, כתוב 'ללא')",
-                    "exertion": מספר בין 1 ל-10 המייצג את רמת המאמץ (אם אין, שים 0),
-                    "notes": "הערה למנטור - תובנה אנליטית שלך לגבי המשתמש, דפוסים שזיהית או דגשים להמשך"
+                    החזר אך ורק מבנה JSON טהור, ללא הקדמות או פקודות Markdown, עם המפתחות:
+                    "balance", "activity", "exertion", "notes"
                     """
                     
+                    st.info("3. שולח בקשת חילוץ מנתונים למוח...")
                     extraction = st.session_state.model.generate_content(extraction_prompt)
+                    st.write(f"4. התשובה הגולמית שהתקבלה מהמוח: {extraction.text}")
                     
-                    # איתור ה-JSON בתוך התשובה ושמירה
                     json_match = re.search(r'\{.*\}', extraction.text, re.DOTALL)
                     if json_match:
                         data = json.loads(json_match.group(0))
                         now = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
-                        
-                        # כתיבת השורה לגיליון
                         sh.append_row([
                             now, 
                             data.get("balance", ""), 
@@ -119,10 +114,12 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                             data.get("exertion", ""), 
                             data.get("notes", "")
                         ])
+                        st.success("5. השורה נכתבה לגיליון בהצלחה! 🎉")
+                    else:
+                        st.warning("שגיאה: המודל לא ייצר מבנה תקין ולכן השמירה דולגה.")
+                        
                 except Exception as db_error:
-                    # שגיאות גיליון יודפסו בשקט בלי להרוס את הצ'אט
-                    print(f"Database sync error: {db_error}")
+                    st.error(f"שגיאת מערכת - העתק את זה: {db_error}")
 
-            except Exception as db_error:
-                    # עכשיו השגיאה תופיע על המסך בצהוב
-                    st.warning(f"שגיאת גיליון - העתק אותה לכאן: {db_error}")
+            except Exception as e:
+                st.error(f"שגיאה בניתוח הצ'אט: {e}")
