@@ -123,5 +123,6 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                     # שגיאות גיליון יודפסו בשקט בלי להרוס את הצ'אט
                     print(f"Database sync error: {db_error}")
 
-            except Exception as e:
-                st.error(f"שגיאה בניתוח: {e}")
+            except Exception as db_error:
+                    # עכשיו השגיאה תופיע על המסך בצהוב
+                    st.warning(f"שגיאת גיליון - העתק אותה לכאן: {db_error}")
