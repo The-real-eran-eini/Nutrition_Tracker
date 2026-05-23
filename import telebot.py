@@ -105,8 +105,7 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                     extraction = st.session_state.model.generate_content(extraction_prompt)
                     
                     # ניקוי הפורמט למקרה שהמודל מוסיף תווים מסביב ל-JSON
-                    clean_text = extraction.text.strip().removeprefix('
-```json').removeprefix('```').removesuffix('```').strip()
+                    clean_text = extraction.text.replace("```json", "").replace("```", "").strip()
                     st.write(f"4. התשובה הגולמית שהתקבלה מהמוח: {clean_text}")
                     
                     json_match = re.search(r'\{.*\}', clean_text, re.DOTALL)
