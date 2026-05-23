@@ -36,8 +36,8 @@ SYSTEM_BEHAVIOR = """
 חוקי המערכת:
 1. אפס רגשות אשם: לעולם אל תעביר ביקורת על חריגה מיעדים או פספוס אימון.
 2. חלונות זמן קצרים: אם המשתמש מדווח על חוסר זמן, הצע אימוני כוח פונקציונליים בבית (10-15 דקות).
-3. תנועה יומיומית: החשב הליכות וטיולים (למשל עם הכלב) כפעילות לגיטימית לכל דבר.
-4. כוח ויציבות: תן דגש על תרגילי ליבה, שיווי משקל וגמישות לבניית "כוח פנימי".
+3. תנועה יומיומית: החשב הליכות וטיולים (למשל עם הכלב) כפעילות לגיטימית.
+4. כוח ויציבות: תן דגש על תרגילי ליבה, שיווי משקל וגמישות.
 5. ניתוח בזמן אמת: בכל הזנת אוכל, הערך קלוריות וחלבון וציין יתרה להמשך היום.
 """
 
@@ -68,7 +68,6 @@ for msg in st.session_state.messages:
 
 # --- קליטת הודעה חדשה ועיבוד ---
 if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא לך להתייעץ..."):
-    # תצוגה במסך
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -81,13 +80,16 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
                 
-                # 2. גיבוי שקט ל-Google Sheets עם מצב מפתח מופעל
+                # 2. גיבוי ל-Google Sheets עם מצב מפתח
                 try:
                     st.info("1. מנסה להתחבר לגוגל שיטס...")
                     scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+                    
+                    # קריאת ההרשאות מתוך הכספת של סטרימליט בפורמט מילון
                     creds_dict = dict(st.secrets["google_credentials"])
                     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
                     gc = gspread.authorize(creds)
+                    
                     sh = gc.open("Nutrition_DB").sheet1
                     st.success("2. התחברות לגיליון עברה בהצלחה! מכין נתונים...")
                     
@@ -95,23 +97,29 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                     המשתמש כתב: '{prompt}'
                     אתה ענית: '{response.text}'
                     
-                    החזר אך ורק מבנה JSON טהור, ללא הקדמות או פקודות Markdown, עם המפתחות:
+                    החזר אך ורק מבנה JSON טהור. אל תשתמש בפקודות Markdown (כמו ```json), רק את הסוגריים המסולסלים עם המפתחות:
                     "balance", "activity", "exertion", "notes"
                     """
                     
                     st.info("3. שולח בקשת חילוץ מנתונים למוח...")
                     extraction = st.session_state.model.generate_content(extraction_prompt)
-                    st.write(f"4. התשובה הגולמית שהתקבלה מהמוח: {extraction.text}")
                     
-                    json_match = re.search(r'\{.*\}', extraction.text, re.DOTALL)
+                    # ניקוי הפורמט למקרה שהמודל מוסיף תווים מסביב ל-JSON
+                    clean_text = extraction.text.strip().removeprefix('
+```json').removeprefix('```').removesuffix('```').strip()
+                    st.write(f"4. התשובה הגולמית שהתקבלה מהמוח: {clean_text}")
+                    
+                    json_match = re.search(r'\{.*\}', clean_text, re.DOTALL)
                     if json_match:
                         data = json.loads(json_match.group(0))
                         now = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
+                        
+                        # הוספת השורה לגיליון
                         sh.append_row([
                             now, 
                             data.get("balance", ""), 
                             data.get("activity", ""), 
-                            data.get("exertion", ""), 
+                            str(data.get("exertion", "")), 
                             data.get("notes", "")
                         ])
                         st.success("5. השורה נכתבה לגיליון בהצלחה! 🎉")
@@ -119,7 +127,7 @@ if prompt := st.chat_input("מה אוכלים? התאמנת? או שסתם בא 
                         st.warning("שגיאה: המודל לא ייצר מבנה תקין ולכן השמירה דולגה.")
                         
                 except Exception as db_error:
-                    st.error(f"שגיאת מערכת - העתק את זה: {db_error}")
+                    st.error(f"שגיאת מערכת בשמירה לגיליון - העתק את זה: {db_error}")
 
             except Exception as e:
                 st.error(f"שגיאה בניתוח הצ'אט: {e}")
